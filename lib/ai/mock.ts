@@ -175,6 +175,18 @@ function buildMockReply(params: ChatCompletionParams): { content: string | null;
   return { content, toolCalls: [] };
 }
 
+/** Deterministische Fake-Quellen, wenn webSearch aktiviert ist (search_web-Mock). */
+function buildMockCitations(params: ChatCompletionParams): ChatCompletionResult["citations"] {
+  if (!params.webSearch) return [];
+  const seed = hashString(lastUserText(params));
+  const count = Math.min(params.webSearch.maxResults, 2 + (seed % 3));
+  return Array.from({ length: count }, (_, i) => ({
+    url: `https://example.com/mock-quelle-${seed}-${i}`,
+    title: `Mock-Quelle ${i + 1} zu „${lastUserText(params).slice(0, 40)}“`,
+    content: `Mock-Suchtreffer ${i + 1} — kein echter Web-Inhalt (MOCK_OPENROUTER=1).`,
+  }));
+}
+
 export async function mockChatCompletion(params: ChatCompletionParams): Promise<ChatCompletionResult> {
   const { content, toolCalls } = buildMockReply(params);
   const promptChars = params.messages.reduce(
@@ -186,6 +198,7 @@ export async function mockChatCompletion(params: ChatCompletionParams): Promise<
     toolCalls,
     usage: mockUsage(promptChars, (content ?? "").length + JSON.stringify(toolCalls).length),
     model: `mock:${getTaskConfig(params.taskType, params.modelOverride).model}`,
+    citations: buildMockCitations(params),
   };
 }
 

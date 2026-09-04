@@ -50,11 +50,19 @@ export interface ChatCompletionUsage {
   cacheReadTokens: number;
 }
 
+export interface UrlCitation {
+  url: string;
+  title?: string;
+  content?: string;
+}
+
 export interface ChatCompletionResult {
   content: string | null;
   toolCalls: ChatCompletionMessageToolCall[];
   usage: ChatCompletionUsage;
   model: string;
+  /** Quellen des `web`-Plugins (nur gesetzt, wenn webSearch aktiviert war). */
+  citations: UrlCitation[];
 }
 
 export type StreamEvent =

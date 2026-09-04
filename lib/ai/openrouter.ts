@@ -128,14 +128,25 @@ export async function chatCompletion(params: ChatCompletionParams): Promise<Chat
 
   const choice = (
     completion as unknown as {
-      choices: Array<{ message: { content: string | null; tool_calls?: ChatCompletionResult["toolCalls"] } }>;
+      choices: Array<{
+        message: {
+          content: string | null;
+          tool_calls?: ChatCompletionResult["toolCalls"];
+          annotations?: Array<{ type: string; url_citation?: { url: string; title?: string; content?: string } }>;
+        };
+      }>;
     }
   ).choices[0];
+  const citations = (choice?.message?.annotations ?? [])
+    .filter((a) => a.type === "url_citation" && a.url_citation)
+    .map((a) => ({ url: a.url_citation!.url, title: a.url_citation!.title, content: a.url_citation!.content }));
+
   return {
     content: choice?.message?.content ?? null,
     toolCalls: choice?.message?.tool_calls ?? [],
     usage,
     model,
+    citations,
   };
 }
 
