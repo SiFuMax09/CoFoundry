@@ -9,6 +9,7 @@ import { describeToolCall } from "./describeTool";
 import { ModelToggle } from "./ModelToggle";
 import { ReadyStrip } from "./ReadyStrip";
 import { UltraplanCard } from "./UltraplanCard";
+import { ResearchCard } from "./ResearchCard";
 import type { DisplayMessage, ChatMessageRow } from "./types";
 
 function rowToDisplay(row: ChatMessageRow): DisplayMessage | null {
@@ -40,6 +41,7 @@ export function ChatPanel({
   const [sending, setSending] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [loadingHistory, setLoadingHistory] = useState(true);
+  const [researchQuestions, setResearchQuestions] = useState<{ id: string; question: string }[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const activePhaseId = activePhase?.id ?? null;
@@ -139,6 +141,12 @@ export function ChatPanel({
     } finally {
       setSending(false);
     }
+  }
+
+  function startResearch() {
+    if (!activePhase || !input.trim() || sending) return;
+    setResearchQuestions((prev) => [...prev, { id: `research-${Date.now()}`, question: input.trim() }]);
+    setInput("");
   }
 
   async function advancePhase() {
@@ -252,6 +260,11 @@ export function ChatPanel({
           </div>
         ))}
 
+        {activePhase &&
+          researchQuestions.map((r) => (
+            <ResearchCard key={r.id} projectId={projectId} phaseId={activePhase.id} question={r.question} />
+          ))}
+
         {activePhase?.order === 0 && activePhase.readySummary && (
           <UltraplanCard projectId={projectId} summary={activePhase.readySummary} onAccepted={onPhasesChanged} />
         )}
@@ -287,6 +300,15 @@ export function ChatPanel({
             rows={1}
             className="thin-scroll max-h-32 flex-1 resize-none rounded-xl border border-hairline bg-cream px-3 py-2 text-sm text-ink outline-none disabled:opacity-60"
           />
+          <button
+            type="button"
+            onClick={startResearch}
+            disabled={!activePhase || !input.trim() || sending}
+            title="Recherche zu diesem Text starten (Multi-Agent, schreibt ein zitiertes Dokument auf die Canvas)"
+            className="shrink-0 rounded-full border border-hairline px-3 py-2 text-sm text-ink hover:border-accent disabled:opacity-60"
+          >
+            🔍
+          </button>
           <button
             type="submit"
             disabled={!activePhase || !input.trim() || sending}
