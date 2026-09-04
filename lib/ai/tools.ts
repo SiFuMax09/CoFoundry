@@ -8,7 +8,7 @@ import { applyCanvasItemUpdate } from "@/lib/canvas/versions";
 import { placeDefault, placeRadially, type Rect } from "@/lib/canvas/layout";
 import { summarize } from "@/lib/canvas/text";
 import { listCanvasItemsForProject } from "@/lib/canvas-items";
-import { updatePhaseFields, setPhaseReady, type PhaseFieldPatch } from "@/lib/phases";
+import { updatePhaseFields, setPhaseReady, clearPhaseReady, type PhaseFieldPatch } from "@/lib/phases";
 
 /**
  * Agent-Tools für die Canvas (Function Calling). `project_id` ist bewusst
@@ -82,6 +82,8 @@ const setPhaseReadySchema = z.object({
   phase_id: z.string(),
   summary: z.string().min(1).max(2000),
 });
+
+const clearPhaseReadySchema = z.object({ phase_id: z.string() });
 
 // --- JSON-Schemas fürs Function-Calling (handschriftlich, klein genug ohne zod-to-json-schema) ---
 
@@ -215,6 +217,19 @@ const toolDefs = [
           summary: { type: "string", description: "Kurze Zusammenfassung dessen, was in dieser Phase erreicht wurde." },
         },
         required: ["phase_id", "summary"],
+      },
+    },
+  },
+  {
+    type: "function" as const,
+    function: {
+      name: "clear_phase_ready",
+      description:
+        "Zieht einen zuvor per set_phase_ready gezeigten Bereitschafts-Hinweis zurück — nutzen, wenn der Nutzer das Thema der aktuellen Phase erkennbar weiterverfolgt, statt abzuschließen.",
+      parameters: {
+        type: "object",
+        properties: { phase_id: { type: "string" } },
+        required: ["phase_id"],
       },
     },
   },
@@ -404,6 +419,17 @@ export async function executeToolCall(
       return {
         result: { phase_id: args.phase_id },
         summary: "Bereitschaft für den Phasenübergang signalisiert",
+        canvasUpdate: updated ? { kind: "phase", data: updated } : undefined,
+      };
+    }
+
+    case "clear_phase_ready": {
+      const args = clearPhaseReadySchema.parse(parsedArgs);
+      const updated = clearPhaseReady(args.phase_id);
+      if (updated) publishCanvasEvent(ctx.projectId, { type: "phase_updated", phase: updated });
+      return {
+        result: { phase_id: args.phase_id },
+        summary: "Bereitschafts-Hinweis zurückgezogen",
         canvasUpdate: updated ? { kind: "phase", data: updated } : undefined,
       };
     }

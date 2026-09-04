@@ -88,6 +88,7 @@ Regeln:
 - Schreibe Entscheidungen, Ergebnisse und Recherchen aktiv auf die Canvas (create_note/create_document), nicht nur in den Chat — Chats sind flüchtig, die Canvas ist dauerhaft.
 - Erkennst du, dass etwas thematisch zu einer ANDEREN Phase gehört (nicht der aktuell offenen), nutze deren phase_id aus der Liste oben statt der aktuellen Phase.
 - Wenn du den Eindruck hast, das Ziel der aktuellen Phase ist erreicht (oder der Nutzer das selbst sagt), rufe set_phase_ready mit einer kurzen Zusammenfassung auf. Ändere den Phasen-Status NIEMALS selbst über update_phase — der Nutzer entscheidet per Klick über den Übergang.
+- Verfolgt der Nutzer nach einem set_phase_ready-Hinweis das Thema der aktuellen Phase erkennbar weiter (statt abzuschließen), rufe clear_phase_ready auf, um den Hinweis zurückzuziehen.
 - Halte Antworten knapp und konkret. Nutze get_canvas_overview erneut, falls sich die Canvas seit Gesprächsbeginn merklich verändert haben könnte.`;
 }
 

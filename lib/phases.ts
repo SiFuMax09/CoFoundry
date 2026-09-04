@@ -42,3 +42,10 @@ export function setPhaseReady(phaseId: string, summary: string) {
   db.update(phases).set({ readySummary: summary, readyAt: new Date() }).where(eq(phases.id, phaseId)).run();
   return db.select().from(phases).where(eq(phases.id, phaseId)).get();
 }
+
+/** Zieht den Bereitschafts-Hinweis zurück (Agent entscheidet: Thema wird
+ * erkennbar weiterverfolgt statt abgeschlossen). */
+export function clearPhaseReady(phaseId: string) {
+  db.update(phases).set({ readySummary: null, readyAt: null }).where(eq(phases.id, phaseId)).run();
+  return db.select().from(phases).where(eq(phases.id, phaseId)).get();
+}
