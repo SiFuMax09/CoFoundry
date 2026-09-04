@@ -73,7 +73,7 @@ export function listProjectsForUser(userId: string): ProjectSummary[] {
       lastActivityAt: new Date(lastActivity).toISOString(),
       phaseCount: projectPhases.length,
       currentPhase: activePhase ? { title: activePhase.title, order: activePhase.order } : null,
-      previewItems: items.map(({ updatedAt: _updatedAt, ...rest }) => rest),
+      previewItems: items.map(({ type, x, y, width, height, color }) => ({ type, x, y, width, height, color })),
     };
   });
 }
