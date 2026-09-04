@@ -1,0 +1,113 @@
+@import "tailwindcss";
+
+/* ---------------------------------------------------------------------------
+   Cofoundry Design-Tokens
+
+   Warmes Creme als Grundton, reinweiße Karten mit sehr dezentem Schatten,
+   weiches Lavendel-Violett als einzige Signalfarbe. Bewusst kein Dark Mode:
+   die Palette lebt vom warmen hellen Papier-Eindruck.
+   --------------------------------------------------------------------------- */
+
+@theme {
+  /* Flächen */
+  --color-cream: #f7f5f0;
+  --color-cream-light: #faf8f4;
+  --color-surface: #ffffff;
+
+  /* Akzent */
+  --color-accent: #7c6fe0;
+  --color-accent-strong: #5b4fc4;
+  --color-accent-soft: #ede9fb;
+  --color-accent-softer: #e7e1fa;
+
+  /* Text */
+  --color-ink: #1f1d1b;
+  --color-muted: #8b8579;
+
+  /* Status */
+  --color-progress: #4e9f6e;
+  --color-danger: #b4472f;
+
+  /* Linien */
+  --color-hairline: #e8e3d9;
+
+  /* Schrift */
+  --font-display: var(--font-fraunces), "Iowan Old Style", Georgia, serif;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system,
+    "Segoe UI", Roboto, sans-serif;
+
+  /* Radien */
+  --radius-card: 1rem;
+  --radius-panel: 1.25rem;
+
+  /* Schatten — überall sehr dezent, nur Notizzettel dürfen kräftiger werden */
+  --shadow-card: 0 1px 2px rgb(31 29 27 / 0.04), 0 4px 16px rgb(31 29 27 / 0.05);
+  --shadow-panel: 0 2px 6px rgb(31 29 27 / 0.06), 0 12px 40px rgb(31 29 27 / 0.1);
+  --shadow-sticky: 0 2px 3px rgb(31 29 27 / 0.08), 0 8px 20px rgb(31 29 27 / 0.12);
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background: var(--color-cream);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Sichtbarer Fokus-Ring auf allen interaktiven Elementen */
+:where(a, button, input, textarea, select, [tabindex]):focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* Reduzierte Bewegung respektieren */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@utility font-display {
+  font-family: var(--font-display);
+  font-optical-sizing: auto;
+}
+
+/* Karte — der Grundbaustein der gesamten Oberfläche */
+@utility card {
+  background: var(--color-surface);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+}
+
+/* Punktgitter im Canvas-Hintergrund */
+@utility dot-grid {
+  background-color: var(--color-cream);
+  background-image: radial-gradient(
+    circle at 1px 1px,
+    rgb(31 29 27 / 0.09) 1px,
+    transparent 0
+  );
+  background-size: 22px 22px;
+}
+
+/* Items fremder Phasen: sichtbar und klickbar, aber zurückgenommen */
+@utility phase-dimmed {
+  opacity: 0.45;
+  filter: saturate(0.6);
+}
+
+/* Schmale, unaufdringliche Scrollbalken in Panels */
+@utility thin-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-hairline) transparent;
+}

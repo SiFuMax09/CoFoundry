@@ -1,0 +1,6 @@
+onlyBuiltDependencies:
+  - esbuild
+  - better-sqlite3
+ignoredBuiltDependencies:
+  - sharp
+  - unrs-resolver
