@@ -142,6 +142,10 @@ export const chatMessages = sqliteTable("chat_messages", {
   // Roh-JSON der vom Modell angeforderten bzw. vom Server ausgeführten
   // Tool-Calls dieser Nachricht (NULL, wenn keine).
   toolCalls: text("tool_calls"),
+  // Nur bei role="tool" gesetzt: verknüpft das Tool-Ergebnis mit dem
+  // auslösenden Tool-Call der vorherigen assistant-Nachricht (nötig, um aus
+  // gespeicherten Turns wieder ein gültiges OpenAI-Message-Array zu bauen).
+  toolCallId: text("tool_call_id"),
   model: text("model"),
   tokensIn: integer("tokens_in"),
   tokensOut: integer("tokens_out"),

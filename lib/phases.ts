@@ -14,3 +14,31 @@ export function getOwnedPhase(phaseId: string, userId: string) {
 export function listPhasesForProject(projectId: string) {
   return db.select().from(phases).where(eq(phases.projectId, projectId)).orderBy(phases.order).all();
 }
+
+export interface PhaseFieldPatch {
+  title?: string;
+  goal?: string;
+  brief?: string;
+  status?: "todo" | "active" | "done";
+  order?: number;
+  systemPromptOverride?: string | null;
+  activeChatModel?: string | null;
+}
+
+/** Von der PUT-Route und dem update_phase-Agent-Tool gemeinsam genutzt. */
+export function updatePhaseFields(phaseId: string, patch: PhaseFieldPatch) {
+  // Leeres Patch (z. B. der Agent ruft update_phase nur mit phase_id auf,
+  // ohne ein Feld zu ändern) — Drizzle wirft bei .set({}) sonst "No values
+  // to set".
+  if (Object.keys(patch).length > 0) {
+    db.update(phases).set(patch).where(eq(phases.id, phaseId)).run();
+  }
+  return db.select().from(phases).where(eq(phases.id, phaseId)).get();
+}
+
+/** Setzt die Bereitschafts-Markierung, die den "Bereit für Phase X?"-Hinweis
+ * bzw. die Ultraplan-Bestätigungskarte in Phase 0 auslöst. */
+export function setPhaseReady(phaseId: string, summary: string) {
+  db.update(phases).set({ readySummary: summary, readyAt: new Date() }).where(eq(phases.id, phaseId)).run();
+  return db.select().from(phases).where(eq(phases.id, phaseId)).get();
+}

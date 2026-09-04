@@ -2,6 +2,7 @@
 
 import { Handle, Position, type NodeProps } from "@xyflow/react";
 import { VersionHistory } from "../VersionHistory";
+import { stripMarkdown } from "@/lib/canvas/text";
 
 export interface DocumentNodeData {
   title: string;
@@ -9,14 +10,6 @@ export interface DocumentNodeData {
   status: "draft" | "final" | null;
   dimmed: boolean;
   onExpand: () => void;
-}
-
-function stripMarkdown(md: string): string {
-  return md
-    .replace(/[#*_`>[\]]/g, "")
-    .replace(/\n{2,}/g, " · ")
-    .replace(/\n/g, " ")
-    .trim();
 }
 
 export function DocumentNode({ id, data }: NodeProps & { data: DocumentNodeData }) {

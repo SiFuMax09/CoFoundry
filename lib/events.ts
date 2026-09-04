@@ -12,9 +12,7 @@ export type CanvasEvent =
   | { type: "item_deleted"; itemId: string }
   | { type: "link_created"; link: unknown }
   | { type: "phase_updated"; phase: unknown }
-  | { type: "agent_progress"; message: string; done: number; total: number }
-  | { type: "chat_token"; phaseId: string; delta: string }
-  | { type: "chat_done"; phaseId: string };
+  | { type: "agent_progress"; message: string; done: number; total: number };
 
 const buses = new Map<string, EventEmitter>();
 

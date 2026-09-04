@@ -1,3 +1,4 @@
+import { getTaskConfig } from "./tasks";
 import type {
   ChatCompletionParams,
   ChatCompletionResult,
@@ -21,13 +22,43 @@ function hashString(input: string): number {
   return Math.abs(hash);
 }
 
+function allText(params: ChatCompletionParams): string {
+  return params.messages
+    .map((m) => (typeof m.content === "string" ? m.content : m.content.map((b) => b.text).join(" ")))
+    .join("\n");
+}
+
 function lastUserText(params: ChatCompletionParams): string {
   const last = [...params.messages].reverse().find((m) => m.role === "user");
   if (!last) return "";
   return typeof last.content === "string" ? last.content : last.content.map((b) => b.text).join(" ");
 }
 
-/** Füllt ein JSON-Schema mit plausiblen Platzhalterwerten — für Tool-Argumente und Structured-Output-Mocks. */
+/**
+ * Sucht im bisherigen Kontext nach echten IDs (Format "<prefix>_<uuid>",
+ * wie lib/db/ids.ts sie vergibt) — die zuletzt genannte je Präfix. Der Mock
+ * erfindet nie eigene IDs für item_id/phase_id & Co., sonst würden Aufrufe
+ * wie update_canvas_item oder link_items gegen nicht existierende Zeilen
+ * laufen (bei phase_id sogar gegen die Fremdschlüssel-Prüfung).
+ */
+function extractKnownIds(params: ChatCompletionParams): Record<string, string> {
+  const text = allText(params);
+  const matches = text.matchAll(/\b([a-z]+)_[0-9a-f]{8}-[0-9a-f-]{27}\b/g);
+  const known: Record<string, string> = {};
+  for (const m of matches) {
+    known[m[1]] = m[0];
+  }
+  return known;
+}
+
+const ID_FIELD_PREFIX: Record<string, string> = {
+  phase_id: "phase",
+  item_id: "item",
+  from_item_id: "item",
+  to_item_id: "item",
+};
+
+/** Füllt ein JSON-Schema mit plausiblen Platzhalterwerten — für Structured-Output-Mocks (dort keine IDs). */
 export function fillSchema(schema: unknown, seed = 0): unknown {
   if (!schema || typeof schema !== "object") return null;
   const s = schema as {
@@ -64,6 +95,29 @@ export function fillSchema(schema: unknown, seed = 0): unknown {
   }
 }
 
+/**
+ * Füllt NUR die Pflichtfelder eines Tool-Parameter-Schemas — optionale
+ * Felder (z. B. phase_id bei create_note) lässt der Mock bewusst weg, statt
+ * sie mit erfundenem Text zu belegen. Für ID-Felder wird eine im bisherigen
+ * Kontext vorkommende echte ID eingesetzt.
+ */
+function fillRequiredArgs(schema: unknown, seed: number, knownIds: Record<string, string>): Record<string, unknown> | null {
+  const s = schema as { type?: string; properties?: Record<string, unknown>; required?: string[] } | undefined;
+  if (!s || s.type !== "object") return {};
+  const out: Record<string, unknown> = {};
+  for (const key of s.required ?? []) {
+    const prefix = ID_FIELD_PREFIX[key];
+    if (prefix) {
+      const known = knownIds[prefix];
+      if (!known) return null; // Tool ohne bekannte ID nicht aufrufbar — Mock lässt es aus.
+      out[key] = known;
+      continue;
+    }
+    out[key] = fillSchema(s.properties?.[key], seed + key.length);
+  }
+  return out;
+}
+
 function mockUsage(promptChars: number, replyChars: number): ChatCompletionUsage {
   return {
     tokensIn: Math.max(1, Math.round(promptChars / 4)),
@@ -82,26 +136,34 @@ function buildMockReply(params: ChatCompletionParams): { content: string | null;
   }
 
   const userText = lastUserText(params);
-  const seed = hashString(userText || params.taskType);
+  // Variiert je Runde innerhalb desselben Turns (messages.length wächst mit
+  // jeder Tool-Runde) — sonst würde eine Konversation, deren erste Runde
+  // deterministisch einen Tool-Call auslöst, denselben Tool-Call in jeder
+  // weiteren Runde wiederholen und nie zu einer Text-Antwort finden.
+  const seed = hashString(`${userText || params.taskType}:${params.messages.length}`);
 
-  // Mit Tools verfügbar: bei etwa jeder zweiten Anfrage einen Tool-Call
-  // simulieren (deterministisch über den Hash der letzten Nutzer-Nachricht,
-  // nicht zufällig), sonst eine reine Text-Antwort.
-  if (params.tools && params.tools.length > 0 && seed % 2 === 0) {
-    const tool = params.tools[seed % params.tools.length];
-    const fn = "function" in tool ? tool.function : undefined;
-    if (fn) {
-      const args = fillSchema(fn.parameters, seed);
-      return {
-        content: null,
-        toolCalls: [
-          {
-            id: `mock_call_${seed}`,
-            type: "function",
-            function: { name: fn.name, arguments: JSON.stringify(args) },
-          },
-        ],
-      };
+  if (params.tools && params.tools.length > 0 && seed % 3 === 0) {
+    const knownIds = extractKnownIds(params);
+    const eligible = params.tools.filter((tool) => {
+      const fn = "function" in tool ? tool.function : undefined;
+      return fn ? fillRequiredArgs(fn.parameters, seed, knownIds) !== null : false;
+    });
+    if (eligible.length > 0) {
+      const tool = eligible[seed % eligible.length];
+      const fn = "function" in tool ? tool.function : undefined;
+      if (fn) {
+        const args = fillRequiredArgs(fn.parameters, seed, knownIds) ?? {};
+        return {
+          content: null,
+          toolCalls: [
+            {
+              id: `mock_call_${seed}`,
+              type: "function",
+              function: { name: fn.name, arguments: JSON.stringify(args) },
+            },
+          ],
+        };
+      }
     }
   }
 
@@ -123,7 +185,7 @@ export async function mockChatCompletion(params: ChatCompletionParams): Promise<
     content,
     toolCalls,
     usage: mockUsage(promptChars, (content ?? "").length + JSON.stringify(toolCalls).length),
-    model: `mock:${params.taskType}`,
+    model: `mock:${getTaskConfig(params.taskType, params.modelOverride).model}`,
   };
 }
 
@@ -148,6 +210,6 @@ export async function* mockStreamChatCompletion(params: ChatCompletionParams): A
   yield {
     type: "done",
     usage: mockUsage(promptChars, (content ?? "").length + JSON.stringify(toolCalls).length),
-    model: `mock:${params.taskType}`,
+    model: `mock:${getTaskConfig(params.taskType, params.modelOverride).model}`,
   };
 }

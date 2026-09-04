@@ -1,18 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { phaseStatusValues } from "@/lib/db/schema";
 import { requireUser } from "@/lib/auth";
 import { getOwnedPhase, updatePhaseFields } from "@/lib/phases";
 import { publishCanvasEvent } from "@/lib/events";
+import { ACTIVE_CHAT_MODEL_OPTIONS } from "@/lib/ai/tasks";
 
-const updatePhaseSchema = z.object({
-  title: z.string().trim().min(1).max(200).optional(),
-  goal: z.string().max(2000).optional(),
-  brief: z.string().max(4000).optional(),
-  status: z.enum(phaseStatusValues).optional(),
-  order: z.number().int().optional(),
-  systemPromptOverride: z.string().max(8000).nullable().optional(),
-});
+const ALLOWED_MODELS = ACTIVE_CHAT_MODEL_OPTIONS.map((o) => o.model) as [string, ...string[]];
+
+const bodySchema = z.object({ model: z.enum(ALLOWED_MODELS) });
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const auth = await requireUser();
@@ -23,15 +18,12 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   if (!owned) return NextResponse.json({ error: "Phase nicht gefunden." }, { status: 404 });
 
   const body = await request.json().catch(() => null);
-  const parsed = updatePhaseSchema.safeParse(body);
+  const parsed = bodySchema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: "Ungültige Eingabe." }, { status: 400 });
-  }
-  if (Object.keys(parsed.data).length === 0) {
-    return NextResponse.json({ error: "Keine Änderungen übergeben." }, { status: 400 });
+    return NextResponse.json({ error: "Ungültiges Modell." }, { status: 400 });
   }
 
-  const updated = updatePhaseFields(id, parsed.data);
+  const updated = updatePhaseFields(id, { activeChatModel: parsed.data.model });
   publishCanvasEvent(owned.project.id, { type: "phase_updated", phase: updated });
 
   return NextResponse.json({ phase: updated });
