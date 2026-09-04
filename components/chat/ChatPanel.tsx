@@ -102,10 +102,11 @@ export function ChatPanel({
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
+        const errorText = data.needsApiKey
+          ? `${data.error}\n\n[Jetzt in den Einstellungen hinterlegen →](/settings)`
+          : (data.error ?? "Fehler bei der Anfrage.");
         setMessages((prev) =>
-          prev.map((m) =>
-            m.id === assistantMsgId ? { ...m, content: data.error ?? "Fehler bei der Anfrage.", pending: false } : m
-          )
+          prev.map((m) => (m.id === assistantMsgId ? { ...m, content: errorText, pending: false } : m))
         );
         return;
       }

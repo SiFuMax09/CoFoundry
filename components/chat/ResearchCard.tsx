@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { readSseStream } from "./sse";
 
 type Stage = "dispatching" | "done" | "error";
@@ -18,6 +19,7 @@ export function ResearchCard({
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const [title, setTitle] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [needsApiKey, setNeedsApiKey] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -33,6 +35,7 @@ export function ResearchCard({
           const data = await res.json().catch(() => ({}));
           if (!cancelled) {
             setError(data.error ?? "Recherche fehlgeschlagen.");
+            setNeedsApiKey(Boolean(data.needsApiKey));
             setStage("error");
           }
           return;
@@ -76,7 +79,16 @@ export function ResearchCard({
           Fertig — Dokument „{title}“ wurde auf die Canvas geschrieben.
         </p>
       )}
-      {stage === "error" && <p className="mt-1 text-xs text-danger">{error}</p>}
+      {stage === "error" && (
+        <div className="mt-1">
+          <p className="text-xs text-danger">{error}</p>
+          {needsApiKey && (
+            <Link href="/settings" className="mt-1 inline-block text-xs font-medium text-accent-strong underline">
+              Jetzt in den Einstellungen hinterlegen →
+            </Link>
+          )}
+        </div>
+      )}
     </div>
   );
 }

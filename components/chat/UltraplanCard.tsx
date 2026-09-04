@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { readSseStream } from "./sse";
 import { UltraplanProposal } from "./UltraplanProposal";
 import type { UltraplanProposalData } from "./ultraplanTypes";
@@ -21,15 +22,18 @@ export function UltraplanCard({
   const [runId, setRunId] = useState<string | null>(null);
   const [proposal, setProposal] = useState<UltraplanProposalData | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [needsApiKey, setNeedsApiKey] = useState(false);
 
   async function startUltraplan() {
     setStage("dispatching");
     setError(null);
+    setNeedsApiKey(false);
     try {
       const res = await fetch(`/api/projects/${projectId}/ultraplan`, { method: "POST" });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         setError(data.error ?? "Ultraplan-Dispatch fehlgeschlagen.");
+        setNeedsApiKey(Boolean(data.needsApiKey));
         setStage("error");
         return;
       }
@@ -81,13 +85,22 @@ export function UltraplanCard({
       {stage === "error" && (
         <div className="mt-2">
           <p className="text-xs text-danger">{error}</p>
-          <button
-            type="button"
-            onClick={startUltraplan}
-            className="mt-2 rounded-full border border-hairline px-3 py-1.5 text-xs text-ink"
-          >
-            Erneut versuchen
-          </button>
+          {needsApiKey ? (
+            <Link
+              href="/settings"
+              className="mt-2 inline-block rounded-full bg-accent px-3 py-1.5 text-xs font-medium text-white hover:bg-accent-strong"
+            >
+              Jetzt in den Einstellungen hinterlegen →
+            </Link>
+          ) : (
+            <button
+              type="button"
+              onClick={startUltraplan}
+              className="mt-2 rounded-full border border-hairline px-3 py-1.5 text-xs text-ink"
+            >
+              Erneut versuchen
+            </button>
+          )}
         </div>
       )}
 
