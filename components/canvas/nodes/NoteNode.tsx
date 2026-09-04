@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
+import { VersionHistory } from "../VersionHistory";
 
 export interface NoteNodeData {
   title: string;
@@ -14,7 +15,7 @@ export interface NoteNodeData {
 
 const NOTE_COLORS = ["#EDE9FB", "#FFF3C4", "#FFE0DE", "#D9F2E3", "#DCEBFF"];
 
-export function NoteNode({ data }: NodeProps & { data: NoteNodeData }) {
+export function NoteNode({ id, data }: NodeProps & { data: NoteNodeData }) {
   const [editing, setEditing] = useState(false);
   const [title, setTitle] = useState(data.title);
   const [content, setContent] = useState(data.content);
@@ -28,13 +29,18 @@ export function NoteNode({ data }: NodeProps & { data: NoteNodeData }) {
 
   return (
     <div
-      className={`w-full h-full rounded-lg p-3 shadow-sticky transition-opacity ${
+      className={`relative h-full w-full rounded-lg p-3 shadow-sticky transition-opacity ${
         data.dimmed ? "phase-dimmed" : ""
       }`}
       style={{ background: data.color ?? NOTE_COLORS[0] }}
       onDoubleClick={() => setEditing(true)}
     >
       <Handle type="target" position={Position.Top} className="opacity-0" />
+      {!editing && (
+        <div className="absolute right-1.5 top-1.5">
+          <VersionHistory itemId={id} />
+        </div>
+      )}
       {editing ? (
         <div className="flex h-full flex-col gap-1">
           <input

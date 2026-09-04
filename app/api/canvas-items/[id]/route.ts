@@ -6,6 +6,7 @@ import { canvasItems, canvasItemStatusValues } from "@/lib/db/schema";
 import { requireUser } from "@/lib/auth";
 import { getOwnedCanvasItem } from "@/lib/canvas-items";
 import { publishCanvasEvent } from "@/lib/events";
+import { applyCanvasItemUpdate } from "@/lib/canvas/versions";
 
 export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const auth = await requireUser();
@@ -51,12 +52,9 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     return NextResponse.json({ error: "Keine Änderungen übergeben." }, { status: 400 });
   }
 
-  db.update(canvasItems)
-    .set({ ...parsed.data, updatedAt: new Date() })
-    .where(eq(canvasItems.id, id))
-    .run();
-
-  const updated = db.select().from(canvasItems).where(eq(canvasItems.id, id)).get();
+  // Manuelle Bearbeitung im UI zählt immer als "user" — der Agent nutzt
+  // seinen eigenen Tool-Pfad (update_canvas_item, task 8), nie diese Route.
+  const updated = applyCanvasItemUpdate(id, parsed.data, "user");
   publishCanvasEvent(owned.project.id, { type: "item_updated", item: updated });
 
   return NextResponse.json({ item: updated });
